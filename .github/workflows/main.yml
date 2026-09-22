@@ -25,10 +25,13 @@ jobs:
           
       - name: Fix line endings
         run: |
-          find . -name "control" -type f -exec dos2unix -v {} \;
-          find . -name "*.plist" -type f -exec dos2unix -v {} \;
-          find . -name "Makefile" -type f -exec dos2unix -v {} \;
-          find . -name "*.xm" -type f -exec dos2unix -v {} \;
+          dos2unix control || true
+          dos2unix Makefile || true
+          dos2unix Tweak.xm || true
+          dos2unix antisocial_patch.plist || true
+          echo "=== Проверка control ==="
+          file control
+          cat -A control | head -5
           
       - name: Build Tweak
         run: |
