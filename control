@@ -3,7 +3,7 @@ Name: antisocial_patch
 Version: 1.0.0
 Architecture: iphoneos-arm
 Description: Token check bypass for antisocial
-Author: YourName
-Maintainer: YourName
+Author: Raphatlia
+Maintainer: Raphatlia
 Section: Tweaks
 Depends: mobilesubstrate
