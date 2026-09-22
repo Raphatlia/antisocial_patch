@@ -39,9 +39,23 @@ jobs:
           make clean
           make package
           
+      - name: Find dylib and deb
+        run: |
+          echo "=== Поиск .dylib ==="
+          find . -name "*.dylib" 2>/dev/null
+          echo "=== Поиск .deb ==="
+          find . -name "*.deb" 2>/dev/null
+          echo "=== Содержимое .theos/obj ==="
+          ls -la .theos/obj/ 2>/dev/null || echo "нет папки .theos/obj"
+          echo "=== Содержимое packages ==="
+          ls -la packages/ 2>/dev/null || echo "нет папки packages"
+          
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: antisocial_patch
-          path: .theos/obj/*.dylib
+          path: |
+            .theos/obj/**/*.dylib
+            .theos/obj/**/*.deb
+            packages/*.deb
           if-no-files-found: warn
