@@ -17,9 +17,18 @@ jobs:
           theos-dir: ${{ github.workspace }}/theos
           theos-src: https://github.com/theos/theos.git
           
+      - name: Debug - list files
+        run: |
+          pwd
+          ls -la
+          find . -name "control" -type f
+          
       - name: Fix line endings
         run: |
-          find . -type f \( -name "control" -o -name "*.plist" -o -name "Makefile" -o -name "*.xm" \) -exec dos2unix {} \;
+          find . -name "control" -type f -exec dos2unix -v {} \;
+          find . -name "*.plist" -type f -exec dos2unix -v {} \;
+          find . -name "Makefile" -type f -exec dos2unix -v {} \;
+          find . -name "*.xm" -type f -exec dos2unix -v {} \;
           
       - name: Build Tweak
         run: |
