@@ -2,8 +2,8 @@
 #import <substrate.h>
 #import <mach-o/dyld.h>
 
-// Адрес функции проверки токена (из out.txt)
-#define TOKEN_CHECK_OFFSET 0x20b8b8
+// Новый адрес функции проверки токена (из Ghidra, StandLeo 3.5)
+#define TOKEN_CHECK_OFFSET 0x204a54
 
 // Оригинальная функция
 static BOOL (*orig_tokenCheck)(void);
