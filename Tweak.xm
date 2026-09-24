@@ -1,37 +1,97 @@
 #import <Foundation/Foundation.h>
 #import <substrate.h>
 #import <mach-o/dyld.h>
+#include "IL2CPP_Resolver.hpp"
 
-// Новый адрес функции проверки токена (из Ghidra, StandLeo 3.5)
-#define TOKEN_CHECK_OFFSET 0x204a54
+// Нужно определить BINARY_NAME — смотри Config.h в Resolver
+#define BINARY_NAME "UnityFramework"
 
-// Оригинальная функция
-static BOOL (*orig_tokenCheck)(void);
+// Время ожидания загрузки модуля (в секундах)
+#define WAIT_TIME_SEC 30
 
-// Наша подмена — всегда возвращает YES (успех)
-static BOOL hooked_tokenCheck(void) {
-    NSLog(@"[antisocial_patch] Token check bypassed!");
-    return YES;
-}
+// Имена классов-кандидатов (перебираем все варианты)
+static const char* CLASS_NAMES[] = {
+    "BunnyHopController",
+    "BunnyHop",
+    "Aimbot",
+    "AimbotController",
+    "Cheat",
+    "CheatMenu",
+    "Menu",
+    "MainMenu",
+    "UIManager",
+    "Panel",
+    NULL
+};
 
-// Функция инициализации — находит базовый адрес бинарника и ставит хук
+// Имена методов-кандидатов для показа меню
+static const char* METHOD_NAMES[] = {
+    "ShowMenu",
+    "Show",
+    "Open",
+    "Init",
+    "Awake",
+    "Start",
+    "OnGUI",
+    "Update",
+    NULL
+};
+
+// Функция инициализации
 __attribute__((constructor))
 static void initPatch(void) {
-    NSLog(@"[antisocial_patch] Initializing...");
+    NSLog(@"[antisocial_patch] Initializing IL2CPP Resolver...");
     
-    // Получаем базовый адрес главного бинарника (STANDLEO)
-    const char *mainImage = _dyld_get_image_name(0);
-    intptr_t baseAddr = _dyld_get_image_vmaddr_slide(0);
+    // Инициализация Resolver — ждём загрузки UnityFramework
+    IL2CPP::Initialize(true, WAIT_TIME_SEC, IL2CPP_FRAMEWORK(BINARY_NAME));
     
-    NSLog(@"[antisocial_patch] Main image: %s, slide: 0x%lx", mainImage, baseAddr);
+    if (!IL2CPP::Initialize) {
+        NSLog(@"[antisocial_patch] Resolver init returned void/unknown");
+    }
     
-    // Вычисляем реальный адрес функции проверки токена
-    void *targetAddr = (void *)(baseAddr + TOKEN_CHECK_OFFSET);
+    NSLog(@"[antisocial_patch] IL2CPP initialized, searching for classes...");
     
-    NSLog(@"[antisocial_patch] Target address: %p", targetAddr);
+    // Перебираем классы
+    for (int i = 0; CLASS_NAMES[i] != NULL; i++) {
+        void* pClass = IL2CPP::Class::Find(CLASS_NAMES[i]);
+        
+        if (pClass == NULL) {
+            NSLog(@"[antisocial_patch] Class not found: %s", CLASS_NAMES[i]);
+            continue;
+        }
+        
+        NSLog(@"[antisocial_patch] Found class: %s", CLASS_NAMES[i]);
+        
+        // Перебираем методы
+        for (int j = 0; METHOD_NAMES[j] != NULL; j++) {
+            void* pMethod = IL2CPP::Class::Utils::GetMethodPointer(pClass, METHOD_NAMES[j]);
+            
+            if (pMethod == NULL) {
+                continue;
+            }
+            
+            NSLog(@"[antisocial_patch] Found method: %s::%s @ %p", 
+                  CLASS_NAMES[i], METHOD_NAMES[j], pMethod);
+            
+            // Пробуем вызвать метод
+            // Для IL2CPP-методов нужен объект экземпляра, но если метод статический — вызываем напрямую
+            typedef void (*FuncPtr)(void*);
+            FuncPtr func = (FuncPtr)pMethod;
+            
+            // Вызываем с NULL (если метод статический)
+            // Если метод не статический — упадёт, но мы попробуем
+            @try {
+                func(NULL);
+                NSLog(@"[antisocial_patch] Called %s::%s(NULL)", CLASS_NAMES[i], METHOD_NAMES[j]);
+            } @catch (NSException *e) {
+                NSLog(@"[antisocial_patch] Exception calling %s::%s: %@", 
+                      CLASS_NAMES[i], METHOD_NAMES[j], e);
+            }
+            
+            // После первого успешного вызова можно выйти
+            // return;
+        }
+    }
     
-    // Ставим хук
-    MSHookFunction(targetAddr, (void *)hooked_tokenCheck, (void **)&orig_tokenCheck);
-    
-    NSLog(@"[antisocial_patch] Hook installed!");
+    NSLog(@"[antisocial_patch] Search complete.");
 }
